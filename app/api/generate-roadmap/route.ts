@@ -86,9 +86,9 @@ INSTRUCTIONS:
 Return a well-structured study plan with modules and topics.`
 
     try {
-      console.log("Attempting generation with gemini-1.5-pro")
+      console.log("Attempting generation with gemini-flash-latest")
       const { object } = await generateObject({
-        model: google("gemini-1.5-pro"),
+        model: google("gemini-flash-latest"),
         schema: roadmapOutputSchema,
         messages: [{ role: "user", content: prompt }],
       })
