@@ -42,9 +42,9 @@ export default function RoadmapDetailPage() {
   const router = useRouter()
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null)
 
-  const loadRoadmap = useCallback(() => {
+  const loadRoadmap = useCallback(async () => {
     const id = params.id as string
-    const r = getRoadmap(id)
+    const r = await getRoadmap(id)
     if (!r) {
       router.push("/dashboard")
       return
@@ -56,7 +56,7 @@ export default function RoadmapDetailPage() {
     loadRoadmap()
   }, [loadRoadmap])
 
-  const handleMarkComplete = (taskId: string) => {
+  const handleMarkComplete = async (taskId: string) => {
     if (!roadmap) return
     const entryIndex = roadmap.studyPlan.findIndex((e) => e.id === taskId)
     if (entryIndex >= 0) {
@@ -75,31 +75,32 @@ export default function RoadmapDetailPage() {
         }
       }
 
-      saveRoadmap(roadmap)
-      updateStreak()
+      await saveRoadmap(roadmap)
+      await updateStreak()
 
-      const stats = getStats()
+      const stats = await getStats()
       const completedCount = roadmap.studyPlan.filter((e) => e.status === "completed").length
       const totalHours = roadmap.studyPlan
         .filter((e) => e.status === "completed")
         .reduce((h, e) => h + e.allocatedHours, 0)
-      updateStats({
+
+      await updateStats({
         ...stats,
         topicsCompleted: completedCount,
         totalStudyHours: Math.round(totalHours * 10) / 10,
       })
     }
-    loadRoadmap()
+    await loadRoadmap()
   }
 
-  const handleMarkMissed = (taskId: string) => {
+  const handleMarkMissed = async (taskId: string) => {
     if (!roadmap) return
     const entryIndex = roadmap.studyPlan.findIndex((e) => e.id === taskId)
     if (entryIndex >= 0) {
       roadmap.studyPlan[entryIndex].status = "missed"
-      saveRoadmap(roadmap)
+      await saveRoadmap(roadmap)
     }
-    loadRoadmap()
+    await loadRoadmap()
   }
 
   if (!roadmap) {

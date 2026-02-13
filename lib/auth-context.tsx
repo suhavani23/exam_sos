@@ -2,14 +2,15 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import type { User } from "./types"
-import { getUser, setUser as storeUser, removeUser, generateId } from "./store"
+import { supabase } from "./supabase"
+import { setUser as storeUser, removeUser } from "./store"
 
 interface AuthContextType {
   user: User | null
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
   signup: (username: string, email: string, password: string) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -19,47 +20,100 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const storedUser = getUser()
-    setUserState(storedUser)
-    setIsLoading(false)
+    // Initial session check
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+
+        const userData: User = {
+          id: session.user.id,
+          username: profile?.username || session.user.email?.split('@')[0] || 'User',
+          email: session.user.email || '',
+          createdAt: session.user.created_at,
+        }
+        setUserState(userData)
+        storeUser(userData)
+      }
+      setIsLoading(false)
+    }
+
+    checkSession()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+
+        const userData: User = {
+          id: session.user.id,
+          username: profile?.username || session.user.email?.split('@')[0] || 'User',
+          email: session.user.email || '',
+          createdAt: session.user.created_at,
+        }
+        setUserState(userData)
+        storeUser(userData)
+      } else {
+        setUserState(null)
+        removeUser()
+      }
+      setIsLoading(false)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
-  const login = async (email: string, _password: string) => {
-    // Simulate auth - in production would validate against backend
-    const existingUsers = JSON.parse(localStorage.getItem("exam-sos-all-users") || "[]")
-    const found = existingUsers.find((u: User & { password: string }) => u.email === email)
-    if (!found) {
-      throw new Error("No account found with this email. Please sign up first.")
-    }
-    const userData: User = {
-      id: found.id,
-      username: found.username,
-      email: found.email,
-      createdAt: found.createdAt,
-    }
-    storeUser(userData)
-    setUserState(userData)
+  const login = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+    if (error) throw error
   }
 
   const signup = async (username: string, email: string, password: string) => {
-    const existingUsers = JSON.parse(localStorage.getItem("exam-sos-all-users") || "[]")
-    const exists = existingUsers.find((u: User) => u.email === email)
-    if (exists) {
-      throw new Error("An account with this email already exists.")
-    }
-    const userData: User = {
-      id: generateId(),
-      username,
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
-      createdAt: new Date().toISOString(),
+      password,
+      options: {
+        data: {
+          username: username,
+        }
+      }
+    })
+
+    if (authError) throw authError
+
+    if (authData.user) {
+      // Create profile record
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          {
+            id: authData.user.id,
+            username,
+            email: authData.user.email
+          }
+        ])
+
+      if (profileError) {
+        console.error("Error creating profile:", profileError)
+      }
     }
-    existingUsers.push({ ...userData, password })
-    localStorage.setItem("exam-sos-all-users", JSON.stringify(existingUsers))
-    storeUser(userData)
-    setUserState(userData)
   }
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut()
     removeUser()
     setUserState(null)
   }

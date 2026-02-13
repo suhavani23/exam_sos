@@ -39,8 +39,8 @@ export default function SchedulePage() {
   const [weekOffset, setWeekOffset] = useState(0)
   const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()))
 
-  const loadData = useCallback(() => {
-    setRoadmaps(getRoadmaps())
+  const loadData = useCallback(async () => {
+    setRoadmaps(await getRoadmaps())
   }, [])
 
   useEffect(() => {
@@ -95,7 +95,7 @@ export default function SchedulePage() {
     return counts
   }, [roadmaps, weekDates])
 
-  const handleMarkComplete = (taskId: string) => {
+  const handleMarkComplete = async (taskId: string) => {
     for (const roadmap of roadmaps) {
       const entryIndex = roadmap.studyPlan.findIndex((e) => e.id === taskId)
       if (entryIndex >= 0) {
@@ -112,10 +112,10 @@ export default function SchedulePage() {
           }
         }
 
-        saveRoadmap(roadmap)
-        updateStreak()
+        await saveRoadmap(roadmap)
+        await updateStreak()
 
-        const stats = getStats()
+        const stats = await getStats()
         const totalCompleted = roadmaps.reduce(
           (acc, r) => acc + r.studyPlan.filter((e) => e.status === "completed").length,
           0
@@ -125,7 +125,7 @@ export default function SchedulePage() {
             acc + r.studyPlan.filter((e) => e.status === "completed").reduce((h, e) => h + e.allocatedHours, 0),
           0
         )
-        updateStats({
+        await updateStats({
           ...stats,
           topicsCompleted: totalCompleted,
           totalStudyHours: Math.round(totalHours * 10) / 10,
@@ -133,19 +133,19 @@ export default function SchedulePage() {
         break
       }
     }
-    loadData()
+    await loadData()
   }
 
-  const handleMarkMissed = (taskId: string) => {
+  const handleMarkMissed = async (taskId: string) => {
     for (const roadmap of roadmaps) {
       const entryIndex = roadmap.studyPlan.findIndex((e) => e.id === taskId)
       if (entryIndex >= 0) {
         roadmap.studyPlan[entryIndex].status = "missed"
-        saveRoadmap(roadmap)
+        await saveRoadmap(roadmap)
         break
       }
     }
-    loadData()
+    await loadData()
   }
 
   const weekLabel = `${weekDates[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${weekDates[6].toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
@@ -300,10 +300,10 @@ export default function SchedulePage() {
           {selectedDate === today
             ? "Today's Sessions"
             : new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+            })}
         </h2>
 
         {selectedTasks.length === 0 ? (
@@ -324,6 +324,7 @@ export default function SchedulePage() {
               <div key={entry.id} className="flex flex-col gap-1">
                 <span className="px-1 text-xs text-muted-foreground">{roadmapName}</span>
                 <DailyTaskCard
+                  key={entry.id}
                   entry={entry}
                   onMarkComplete={handleMarkComplete}
                   onMarkMissed={handleMarkMissed}

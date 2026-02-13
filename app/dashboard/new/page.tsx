@@ -132,11 +132,11 @@ Module 4: Modern Physics
         data.roadmap.modules
       )
 
-      saveRoadmap(roadmap)
+      await saveRoadmap(roadmap)
 
       // Update stats
-      const stats = getStats()
-      updateStats({
+      const stats = await getStats()
+      await updateStats({
         ...stats,
         totalTopics: stats.totalTopics + roadmap.topics.length,
       })
@@ -227,7 +227,6 @@ Module 4: Modern Physics
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>1 hour</span>
-                <span>12 hours</span>
                 <span>12 hours</span>
               </div>
             </div>
