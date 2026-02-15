@@ -2,6 +2,10 @@
 
 EXAMSOS is a premium, AI-powered study planning application designed to transform complex syllabi into actionable, gamified study roadmaps. Built with Next.js, Supabase, and Google Gemini AI, it helps students master their subjects through personalized scheduling and spaced repetition.
 
+## 🔗 Live Demo
+
+Check out the live application: [EXAMSOS Live](https://examsos-shruti777000-3532s-projects.vercel.app/)
+
 ## 🚀 Key Features
 
 - **AI Roadmap Generation**: Instantly converts syllabus text or files into structured modules and topics using Google Gemini-1.5-Flash.
